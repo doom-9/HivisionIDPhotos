@@ -15,7 +15,7 @@ RUN pip install --no-cache-dir -r requirements.txt -r requirements-app.txt
 
 COPY . .
 
-EXPOSE 7860
+# EXPOSE 7860
 EXPOSE 8080
 
-CMD ["python3", "-u", "app.py", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["sh", "-c", "python3 scripts/download_model.py --models all && python3 deploy_api.py"]

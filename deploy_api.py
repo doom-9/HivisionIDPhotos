@@ -353,4 +353,4 @@ if __name__ == "__main__":
     import uvicorn
 
     # 在8080端口运行推理服务
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    uvicorn.run("deploy_api:app", host="0.0.0.0", port=8080, workers=4)
