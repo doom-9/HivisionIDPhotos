@@ -19,6 +19,7 @@ import base64
 import numpy as np
 import cv2
 from starlette.middleware.cors import CORSMiddleware
+import asyncio
 
 app = FastAPI()
 creator = IDCreator()
@@ -51,7 +52,7 @@ async def idphoto_inference(
     head_height_ratio: float = 0.45,
     top_distance_max: float = 0.12,
     top_distance_min: float = 0.10,
-):  
+):
     # 如果传入了base64，则直接使用base64解码
     if input_image_base64:
         img = base64_2_numpy(input_image_base64)
@@ -67,7 +68,8 @@ async def idphoto_inference(
     # 将字符串转为元组
     size = (int(height), int(width))
     try:
-        result = creator(
+        result = await asyncio.to_thread(
+            creator,
             img,
             size=size,
             head_measure_ratio=head_measure_ratio,
@@ -79,17 +81,23 @@ async def idphoto_inference(
         result_message = {"status": False}
     # 如果检测到人脸数量等于1, 则返回标准证和高清照结果（png 4通道图像）
     else:
-        result_image_standard_bytes = save_image_dpi_to_bytes(cv2.cvtColor(result.standard, cv2.COLOR_RGBA2BGRA), None, dpi)
+        result_image_standard_bytes = await asyncio.to_thread(
+            save_image_dpi_to_bytes, cv2.cvtColor(result.standard, cv2.COLOR_RGBA2BGRA), None, dpi
+        )
         
+        image_base64_standard = await asyncio.to_thread(bytes_2_base64, result_image_standard_bytes)
+
         result_message = {
             "status": True,
-            "image_base64_standard": bytes_2_base64(result_image_standard_bytes),
+            "image_base64_standard": image_base64_standard,
         }
 
         # 如果hd为True, 则增加高清照结果（png 4通道图像）
         if hd:
-            result_image_hd_bytes = save_image_dpi_to_bytes(cv2.cvtColor(result.hd, cv2.COLOR_RGBA2BGRA), None, dpi)
-            result_message["image_base64_hd"] = bytes_2_base64(result_image_hd_bytes)
+            result_image_hd_bytes = await asyncio.to_thread(
+                save_image_dpi_to_bytes, cv2.cvtColor(result.hd, cv2.COLOR_RGBA2BGRA), None, dpi
+            )
+            result_message["image_base64_hd"] = image_base64_standard
 
     return result_message
 
