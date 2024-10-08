@@ -6,8 +6,10 @@ from hivision.creator.layout_calculator import (
     generate_layout_image,
 )
 from hivision.creator.choose_handler import choose_handler
+from hivision.plugin.template.template_calculator import generte_template_photo
 from hivision.utils import (
     add_background,
+    add_background_with_image,
     resize_image_to_kb,
     bytes_2_base64,
     base64_2_numpy,
@@ -178,6 +180,78 @@ async def photo_add_background(
 
     return result_messgae
 
+# 透明图像添加图片背景接口
+@app.post("/add_background_image")
+async def photo_add_background_image(
+    input_image: UploadFile = File(None),
+    input_image_base64: str = Form(None),
+    background_image: UploadFile = File(None),
+    background_image_base64: str = Form(None),
+    kb: int = Form(None),
+    dpi: int = Form(300),
+):
+    if input_image_base64:
+        img = base64_2_numpy(input_image_base64)
+    else:
+        image_bytes = await input_image.read()
+        nparr = np.frombuffer(image_bytes, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_UNCHANGED)
+
+    if background_image_base64:
+        background_img = base64_2_numpy(background_image_base64)
+    else:
+        background_image_bytes = await background_image.read()
+        nparr = np.frombuffer(background_image_bytes, np.uint8)
+        background_img = cv2.imdecode(nparr, cv2.IMREAD_UNCHANGED)
+
+    background_img = cv2.cvtColor(background_img, cv2.COLOR_RGB2BGR)
+    result_image = add_background_with_image(img, background_img).astype(np.uint8)
+
+    result_image = cv2.cvtColor(result_image, cv2.COLOR_RGB2BGR)
+    if kb:
+        result_image_bytes = resize_image_to_kb(result_image, None, int(kb), dpi=dpi)
+    else:
+        result_image_bytes = save_image_dpi_to_bytes(result_image, None, dpi=dpi)
+
+    result_messgae = {
+        "status": True,
+        "image_base64": bytes_2_base64(result_image_bytes),
+    }
+
+    return result_messgae
+
+# 透明图像添加社交背景接口
+@app.post("/add_social_background")
+async def photo_add_social_image(
+    input_image: UploadFile = File(None),
+    input_image_base64: str = Form(None),
+    social: str = Form("wechat"),
+    kb: int = Form(None),
+    dpi: int = Form(300),
+):
+    if input_image_base64:
+        img = base64_2_numpy(input_image_base64)
+    else:
+        image_bytes = await input_image.read()
+        nparr = np.frombuffer(image_bytes, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_UNCHANGED)
+
+    result_image_template = generte_template_photo(
+        template_name=social, input_image=img,
+    )
+    
+    result_image_template = cv2.cvtColor(result_image_template, cv2.COLOR_RGB2BGR)
+    if kb:
+        result_image_bytes = resize_image_to_kb(result_image_template, None, int(kb), dpi=dpi)
+    else:
+        result_image_bytes = save_image_dpi_to_bytes(result_image_template, None, dpi=dpi)
+        
+    result_messgae = {
+        "status": True,
+        "image_base64": bytes_2_base64(result_image_bytes),
+    }
+    
+    return result_messgae
 
 # 六寸排版照生成接口
 @app.post("/generate_layout_photos")
