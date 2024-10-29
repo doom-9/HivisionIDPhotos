@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, Form, File
 from hivision import IDCreator
+from hivision.creator.face_detector import detect_face_mtcnn_simple
 from hivision.error import FaceError
 from hivision.creator.layout_calculator import (
     generate_layout_array,
@@ -427,6 +428,33 @@ async def idphoto_crop_inference(
         if hd:
             result_image_hd_bytes = save_image_dpi_to_bytes(cv2.cvtColor(result.hd, cv2.COLOR_RGBA2BGRA), None, dpi)
             result_message["image_base64_hd"] = bytes_2_base64(result_image_hd_bytes)
+
+    return result_message
+
+# 人脸检测接口
+@app.post("/face_detect")
+async def face_detect_inference(
+    input_image: UploadFile = File(None),
+    input_image_base64: str = Form(None),
+):
+    # 如果传入了base64，则直接使用base64解码
+    if input_image_base64:
+        img = base64_2_numpy(input_image_base64)
+    # 否则使用上传的图片
+    else:
+        image_bytes = await input_image.read()
+        nparr = np.frombuffer(image_bytes, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+    try:
+        await asyncio.to_thread(
+            detect_face_mtcnn_simple,
+            img,
+        )
+    except FaceError:
+        result_message = {"status": False}
+    else:
+        result_message = {"status": True}
 
     return result_message
 
