@@ -191,6 +191,8 @@ async def photo_add_background_image(
     kb: int = Form(None),
     dpi: int = Form(300),
 ):
+    print("add_background_image")
+    print(input_image_base64)
     if input_image_base64:
         img = base64_2_numpy(input_image_base64)
     else:
@@ -463,4 +465,4 @@ if __name__ == "__main__":
     import uvicorn
 
     # 在8080端口运行推理服务
-    uvicorn.run("deploy_api:app", host="0.0.0.0", port=8080, workers=4)
+    uvicorn.run("deploy_api:app", host="0.0.0.0", port=8080, workers=2)
