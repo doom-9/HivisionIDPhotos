@@ -100,7 +100,8 @@ async def idphoto_inference(
             result_image_hd_bytes = await asyncio.to_thread(
                 save_image_dpi_to_bytes, cv2.cvtColor(result.hd, cv2.COLOR_RGBA2BGRA), None, dpi
             )
-            result_message["image_base64_hd"] = image_base64_standard
+            image_base64_hd = await asyncio.to_thread(bytes_2_base64, result_image_hd_bytes)
+            result_message["image_base64_hd"] = image_base64_hd
 
     return result_message
 
